@@ -7,7 +7,7 @@ COPY src ./src
 RUN mvn clean package -DskipTests
 
 # Stage 2: Create the final, slim image to run the application
-FROM openjdk:21-jdk-slim
+FROM eclipse-temurin:21-jre
 WORKDIR /app
 COPY --from=build /app/target/*.jar app.jar
 EXPOSE 8080
