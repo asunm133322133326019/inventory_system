@@ -9,6 +9,6 @@ RUN mvn clean package -DskipTests
 # Stage 2: Create the final, slim image to run the application
 FROM openjdk:21-jdk-slim
 WORKDIR /app
-COPY --from=build /target/*.jar app.jar
+COPY --from=build /app/target/*.jar app.jar
 EXPOSE 8080
 ENTRYPOINT ["java", "-jar", "app.jar"]
