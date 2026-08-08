@@ -1,0 +1,106 @@
+package com.example;
+
+import org.springframework.boot.autoconfigure.jdbc.DataSourceProperties;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Primary;
+import com.zaxxer.hikari.HikariDataSource;
+import java.net.URI;
+
+@Configuration
+public class DatabaseConfig {
+
+    @Bean
+    @Primary
+    public HikariDataSource dataSource(DataSourceProperties properties) {
+        String url = properties.getUrl();
+        
+        // If the URL is empty or null, check if DATABASE_URL env var is set
+        if (url == null || url.trim().isEmpty()) {
+            url = System.getenv("DATABASE_URL");
+        }
+        
+        String username = properties.getUsername();
+        String password = properties.getPassword();
+
+        if (url != null && !url.trim().isEmpty()) {
+            try {
+                String cleanUrl = url.trim();
+                // Handle standard postgres:// or postgresql:// URIs
+                if (cleanUrl.startsWith("postgres://") || cleanUrl.startsWith("postgresql://")) {
+                    URI uri = new URI(cleanUrl);
+                    String userInfo = uri.getUserInfo();
+                    if (userInfo != null && userInfo.contains(":")) {
+                        String[] parts = userInfo.split(":", 2);
+                        username = parts[0];
+                        password = parts[1];
+                    }
+                    
+                    String host = uri.getHost();
+                    int port = uri.getPort();
+                    String path = uri.getPath();
+                    String query = uri.getQuery();
+                    
+                    StringBuilder sb = new StringBuilder("jdbc:postgresql://");
+                    sb.append(host);
+                    if (port != -1) {
+                        sb.append(":").append(port);
+                    } else {
+                        sb.append(":5432");
+                    }
+                    sb.append(path);
+                    if (query != null) {
+                        sb.append("?").append(query);
+                    } else {
+                        sb.append("?sslmode=require");
+                    }
+                    url = sb.toString();
+                } 
+                // Handle jdbc:postgresql:// with inline credentials
+                else if (cleanUrl.startsWith("jdbc:postgresql://") && cleanUrl.contains("@")) {
+                    String standardUriStr = cleanUrl.substring(5); // strip "jdbc:"
+                    URI uri = new URI(standardUriStr);
+                    String userInfo = uri.getUserInfo();
+                    if (userInfo != null && userInfo.contains(":")) {
+                        String[] parts = userInfo.split(":", 2);
+                        username = parts[0];
+                        password = parts[1];
+                    }
+                    
+                    String host = uri.getHost();
+                    int port = uri.getPort();
+                    String path = uri.getPath();
+                    String query = uri.getQuery();
+                    
+                    StringBuilder sb = new StringBuilder("jdbc:postgresql://");
+                    sb.append(host);
+                    if (port != -1) {
+                        sb.append(":").append(port);
+                    } else {
+                        sb.append(":5432");
+                    }
+                    sb.append(path);
+                    if (query != null) {
+                        sb.append("?").append(query);
+                    } else {
+                        sb.append("?sslmode=require");
+                    }
+                    url = sb.toString();
+                }
+            } catch (Exception e) {
+                // Fall back to original properties if parsing fails
+            }
+        }
+
+        HikariDataSource dataSource = new HikariDataSource();
+        dataSource.setJdbcUrl(url);
+        dataSource.setUsername(username);
+        dataSource.setPassword(password);
+        if (properties.getDriverClassName() != null) {
+            dataSource.setDriverClassName(properties.getDriverClassName());
+        } else {
+            dataSource.setDriverClassName("org.postgresql.Driver");
+        }
+        return dataSource;
+    }
+}
