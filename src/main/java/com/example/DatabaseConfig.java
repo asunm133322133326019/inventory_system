@@ -15,9 +15,15 @@ public class DatabaseConfig {
     public HikariDataSource dataSource(DataSourceProperties properties) {
         String url = properties.getUrl();
         
+        System.out.println("==========================================================");
+        System.out.println("[DatabaseConfig] Initializing custom DataSource bean...");
+        System.out.println("[DatabaseConfig] Original properties URL: " + url);
+        System.out.println("[DatabaseConfig] Original properties Username: " + properties.getUsername());
+        
         // If the URL is empty or null, check if DATABASE_URL env var is set
         if (url == null || url.trim().isEmpty()) {
             url = System.getenv("DATABASE_URL");
+            System.out.println("[DatabaseConfig] URL was empty, fetched from DATABASE_URL env: " + url);
         }
         
         String username = properties.getUsername();
@@ -28,6 +34,7 @@ public class DatabaseConfig {
                 String cleanUrl = url.trim();
                 // Handle standard postgres:// or postgresql:// URIs
                 if (cleanUrl.startsWith("postgres://") || cleanUrl.startsWith("postgresql://")) {
+                    System.out.println("[DatabaseConfig] Parsing postgres:// or postgresql:// URI format...");
                     URI uri = new URI(cleanUrl);
                     String userInfo = uri.getUserInfo();
                     if (userInfo != null && userInfo.contains(":")) {
@@ -58,6 +65,7 @@ public class DatabaseConfig {
                 } 
                 // Handle jdbc:postgresql:// with inline credentials
                 else if (cleanUrl.startsWith("jdbc:postgresql://") && cleanUrl.contains("@")) {
+                    System.out.println("[DatabaseConfig] Parsing jdbc:postgresql:// with inline credentials...");
                     String standardUriStr = cleanUrl.substring(5); // strip "jdbc:"
                     URI uri = new URI(standardUriStr);
                     String userInfo = uri.getUserInfo();
@@ -88,9 +96,14 @@ public class DatabaseConfig {
                     url = sb.toString();
                 }
             } catch (Exception e) {
-                // Fall back to original properties if parsing fails
+                System.err.println("[DatabaseConfig] Error parsing connection URL: " + e.getMessage());
+                e.printStackTrace();
             }
         }
+
+        System.out.println("[DatabaseConfig] Final configured JDBC URL: " + url);
+        System.out.println("[DatabaseConfig] Final configured Username: " + username);
+        System.out.println("==========================================================");
 
         HikariDataSource dataSource = new HikariDataSource();
         dataSource.setJdbcUrl(url);
